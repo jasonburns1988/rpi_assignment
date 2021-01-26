@@ -7,4 +7,6 @@ Tools, Technology & Equipment:
 
 Hardware: Rpi, motion sensor, sense hat, SD card
 
+Video Link: https://youtu.be/kcNzq5ZkxXg 
+
 
