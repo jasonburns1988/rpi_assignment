@@ -1,0 +1,92 @@
+#sense_api.py
+#!/usr/bin/python3
+
+from flask import Flask, request
+from flask_cors import CORS
+from sense_hat import SenseHat
+
+sense = SenseHat()
+
+#clear sensehat and intialise light_state
+sense.clear()
+
+app = Flask(__name__)
+CORS(app)
+
+@app.route('/sensehat/temp',methods=['GET'])
+def current_temp():
+    temp=round(sense.get_temperature(),2)
+    return str(temp)+"\n"
+
+@app.route('/sensehat/light',methods=['GET'])
+def light_get():
+    #check top left pixel value(==0 - off, >0 - on) 
+    print(sense.get_pixel(0, 0)) 
+    if sense.get_pixel(0, 0)[0] == 0:
+        return '{"state":"off"}'
+    else:
+            return '{"state":"on"}'
+
+@app.route('/sensehat/light',methods=['POST'])
+def light_post():
+    state=request.args.get('state')
+    print (state)
+    if (state=="on"):
+        sense.clear(255,255,255)
+        return '{"state":"on"}'
+    else: 
+        sense.clear(0,0,0)
+        return '{"state":"off"}'
+
+if __name__ == "__main__":
+    #Run API on port 5000, set debug to true
+    app.run(host='0.0.0.0', port=5000, debug=True)
+	
+
+#lighton/off
+compsys@compsys-virtualbox:~$ ssh pi@192.168.0.25
+pi@192.168.0.25's password: 
+Linux raspberrypi 5.4.79-v7+ #1373 SMP Mon Nov 23 13:22:33 GMT 2020 armv7l
+
+The programs included with the Debian GNU/Linux system are free software;
+the exact distribution terms for each program are described in the
+individual files in /usr/share/doc/*/copyright.
+
+Debian GNU/Linux comes with ABSOLUTELY NO WARRANTY, to the extent
+permitted by applicable law.
+Last login: Tue Jan 26 12:27:48 2021 from 192.168.0.22
+pi@raspberrypi:~ $ curl -X POST http://192.168.0.25:5000/sensehat/light?state=on
+{"state":"on"}pi@raspberrypi:~ $ curl -X POST http://192.168.0.25:5000/sensehat/light?state=off
+{"state":"off"}pi@raspberrypi:~ $ ^C
+pi@raspberrypi:~ $ 
+
+#sensor code
+from realhttp import *
+from time import *
+from gpio import *
+
+urlON = "http://192.168.1.153:5000/sensehat/light?state=on"
+urlOFF= "http://192.168.1.153:5000/sensehat/light?state=off"
+pinMode(1, IN)
+
+def onHTTPDone(status, data):
+    print("status: " + str(status))
+    print("data: " + data)
+
+def main():
+    http = RealHTTPClient()
+    http.onDone(onHTTPDone)
+
+    # don't let it finish
+    while True:
+        motionState = digitalRead(1)
+        print(motionState)
+        if motionState==LOW:
+            http.post(urlOFF,"")
+        else:
+            http.post(urlON,"")
+        sleep(1)
+
+if __name__ == "__main__":
+    main()
+	
